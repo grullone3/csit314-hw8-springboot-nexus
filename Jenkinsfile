@@ -35,6 +35,25 @@ pipeline {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
+
+        stage('Deploy to Nexus') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-creds',
+                                                  usernameVariable: 'NEXUS_USER',
+                                                  passwordVariable: 'NEXUS_PASS')]) {
+                    writeFile file: 'nexus-settings.xml', text: '''<settings>
+  <servers>
+    <server>
+      <id>nexus</id>
+      <username>${env.NEXUS_USER}</username>
+      <password>${env.NEXUS_PASS}</password>
+    </server>
+  </servers>
+</settings>'''
+                    sh 'mvn deploy -DskipTests -s nexus-settings.xml'
+                }
+            }
+        }
     }
 
     post {
@@ -42,7 +61,7 @@ pipeline {
             echo 'Pipeline finished.'
         }
         success {
-            echo 'Build successful!'
+            echo 'Build successful! Jar deployed to Nexus.'
         }
         failure {
             echo 'Build failed!'
